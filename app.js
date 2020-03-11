@@ -112,10 +112,17 @@ router.post('/api/clearCompleted',async ctx=>{
     let datachange={};
     try{
         if(data.result.ok){
+          if(data.result.n>0){
             datachange={
                 success:true,
                 msg:"清除已完成事件成功",
             }
+        }else{
+            datachange={
+                success:false,
+                msg:"暂无已完成事件",
+            }
+        }
         }
     } catch (err) {
         datachange = {
