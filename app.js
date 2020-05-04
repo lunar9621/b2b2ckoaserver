@@ -9,53 +9,54 @@ const app = new Koa();
 const router = new Router();
 //配置post提交数据的中间件
 app.use(Bodyparser());
+
 //db操作
-router.get('/api/eventList', async ctx => {
-    console.log(ctx.query);
-    let {status}=ctx.query;
- let result,activeResult,completedResult,activeLength,completedLength;
- activeResult=await DB.find('todos',{done:false});
- completedResult=await DB.find('todos',{done:true});
- activeLength=activeResult.length;
- completedLength=completedResult.length;
- if(status==='0'){
-    result= await DB.find('todos',{});
-}else if(status==='1'){
-   result=activeResult;
-}else{
-    result=completedResult; 
-}
- let eventList;
- try{
-eventList={
-    success:true,
-    msg:'获取事件列表成功',
-    obj:result,
-    activeLength,
-    completedLength,
-}
- }catch(err){
-   console.log("err",err);
-   eventList={
-       success:false,
-       msg:"获取事件列表出错",
-       obj:{}
+router.get('/apikoa/routes', async ctx => {
+    let result,body=[];
+   result=await DB.find('MenuConf',{});
+   console.log("result",result);
+   for(let item in result){
+  body.push({
+    fatherNode:result[item].fatherNode,
+    name:result[item].moduleName,
+    dataSource:result[item].dataSource,
+    path:result[item].path,
+    component:result[item].templateModule=="CoopManage"?"./CoopManage/CoopList":"./CheckManage/CheckList"
+  })
    }
- }
- ctx.body=eventList;
- console.log("eventList",eventList);
+    ctx.body={
+       routes:body};
+})
+
+//列表页配置
+router.get('/apikoa/listMake/queryListSetting', async ctx => {
+    console.log("queryListSettingquery",ctx.query);
+    let {moduleID}=ctx.query;
+    let tmpid=parseInt(moduleID);
+ let result;
+ result=await DB.find('ListSetting',{moduleID:tmpid});
+ ctx.body={
+     success:true,
+     msg:"获取配置成功",
+     obj:result[0],
+ };
 })
 
 
-router.post('/api/deleteEvent', async ctx => {
-    let { index } = ctx.request.body;
-    let data = await DB.remove('todos', { index });
+
+router.post('/apikoa/listMake/saveListSetting', async ctx => {
+    console.log("savelistsettingbody",ctx.request.body);
+    let { moduleID } = ctx.request.body;
+    let updateData={
+        ...ctx.request.body,
+        timestamp:new Date()};
+    let data = await DB.update('ListSetting', { moduleID },updateData);
     let datachange = {};
     try {
         if (data.result.ok) {
             datachange = {
                 success: true,
-                msg: "删除事件成功",
+                msg: "保存成功",
             }
         }
     } catch (err) {
@@ -67,97 +68,9 @@ router.post('/api/deleteEvent', async ctx => {
     ctx.body = datachange;
 })
 
-router.post('/api/addEvent', async ctx => {
-    let { index, name, done } = ctx.request.body;
-    let data = await DB.insert('todos', ctx.request.body);
-    let datachange = {};
-    try {
-        if (data.result.ok) {
-            datachange = {
-                success: true,
-                msg: "添加事件成功",
-            }
-        }
-    } catch (err) {
-        datachange = {
-            success: false,
-            msg: err,
-        }
-    }
-    ctx.body = datachange;
-})
 
-router.post('/api/updateEvent', async ctx => {
-    let { index, name } = ctx.request.body;
-    let data = await DB.update('todos', { index }, { name });
-    let datachange = {};
-    try {
-        if (data.result.ok) {
-            datachange = {
-                success: true,
-                msg: "修改事件成功",
-            }
-        }
-    } catch (err) {
-        datachange = {
-            success: false,
-            msg: err,
-        }
-    }
-    ctx.body = datachange;
-})
 
-router.post('/api/clearCompleted',async ctx=>{
-    let data=await DB.removeAll('todos',{done:true});
-    let datachange={};
-    try{
-        if(data.result.ok){
-          if(data.result.n>0){
-            datachange={
-                success:true,
-                msg:"清除已完成事件成功",
-            }
-        }else{
-            datachange={
-                success:false,
-                msg:"暂无已完成事件",
-            }
-        }
-        }
-    } catch (err) {
-        datachange = {
-            success: false,
-            msg: err,
-        }
-    }
-    ctx.body = datachange;
-})
 
-router.post('/api/changeDoneStatus', async ctx => {
-    console.log(ctx.request.body);
-    let { index, selected } = ctx.request.body;
-    let data;
-    if (selected === true) {
-        data = await DB.update('todos', { index }, { done: true });
-    } else {
-        data = await DB.update('todos', { index }, { done: false });
-    }
-    let datachange = {};
-    try {
-        if (data.result.ok) {
-            datachange = {
-                success: true,
-                msg: "改变事件状态成功",
-            }
-        }
-    } catch (err) {
-        datachange = {
-            success: false,
-            msg: err,
-        }
-    }
-    ctx.body = datachange;
-})
 
 app.use(router.routes()).use(router.allowedMethods());
 
